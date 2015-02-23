@@ -12,24 +12,11 @@ namespace ZF\ApiProblem;
 class ApiProblem
 {
     /**
-     * Additional details to include in report
-     *
-     * @var array
-     */
-    protected $additionalDetails = array();
-
-    /**
-     * URL describing the problem type; defaults to HTTP status codes
-     * @var string
-     */
-    protected $type = 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html';
-
-    /**
      * Description of the specific problem.
      *
      * @var string|\Exception
      */
-    protected $detail = '';
+    protected $errors = '';
 
     /**
      * Whether or not to include a stack trace and previous
@@ -52,10 +39,8 @@ class ApiProblem
      * @var array
      */
     protected $normalizedProperties = array(
-        'type'   => 'type',
         'status' => 'status',
-        'title'  => 'title',
-        'detail' => 'detail',
+        'errors' => 'errors',
     );
 
     /**
@@ -106,13 +91,6 @@ class ApiProblem
     );
 
     /**
-     * Title of the error.
-     *
-     * @var string
-     */
-    protected $title;
-
-    /**
      * Constructor
      *
      * Create an instance using the provided information. If nothing is
@@ -121,34 +99,12 @@ class ApiProblem
      * from $problemStatusTitles as a result.
      *
      * @param int    $status
-     * @param string $detail
-     * @param string $type
-     * @param string $title
-     * @param array  $additional
+     * @param string $errors
      */
-    public function __construct($status, $detail, $type = null, $title = null, array $additional = array())
+    public function __construct($status, $errors)
     {
-        if ($detail instanceof Exception\ProblemExceptionInterface) {
-            if (null === $type) {
-                $type = $detail->getType();
-            }
-            if (null === $title) {
-                $title = $detail->getTitle();
-            }
-            if (empty($additional)) {
-                $additional = $detail->getAdditionalDetails();
-            }
-        }
-
         $this->status = $status;
-        $this->detail = $detail;
-        $this->title  = $title;
-
-        if (null !== $type) {
-            $this->type = $type;
-        }
-
-        $this->additionalDetails = $additional;
+        $this->errors = $errors;
     }
 
     /**
@@ -166,14 +122,6 @@ class ApiProblem
             return $this->{$prop};
         }
 
-        if (isset($this->additionalDetails[$name])) {
-            return $this->additionalDetails[$name];
-        }
-
-        if (isset($this->additionalDetails[$normalized])) {
-            return $this->additionalDetails[$normalized];
-        }
-
         throw new Exception\InvalidArgumentException(sprintf(
             'Invalid property name "%s"',
             $name
@@ -187,14 +135,10 @@ class ApiProblem
      */
     public function toArray()
     {
-        $problem = array(
-            'type'   => $this->type,
-            'title'  => $this->getTitle(),
+        return array(
             'status' => $this->getStatus(),
-            'detail' => $this->getDetail(),
+            'errors' => $this->getErrors(),
         );
-        // Required fields should always overwrite additional fields
-        return array_merge($this->additionalDetails, $problem);
     }
 
     /**
@@ -211,20 +155,20 @@ class ApiProblem
     }
 
     /**
-     * Retrieve the API-Problem detail
+     * Retrieve the API-Problem errors
      *
-     * If an exception was provided, creates the detail message from it;
-     * otherwise, detail as provided is used.
+     * If an exception was provided, creates the errors message from it;
+     * otherwise, errors as provided is used.
      *
      * @return string
      */
-    protected function getDetail()
+    protected function getErrors()
     {
-        if ($this->detail instanceof \Exception) {
-            return $this->createDetailFromException();
+        if ($this->errors instanceof \Exception) {
+            return $this->createErrorsFromException();
         }
 
-        return $this->detail;
+        return $this->errors;
     }
 
     /**
@@ -237,7 +181,7 @@ class ApiProblem
      */
     protected function getStatus()
     {
-        if ($this->detail instanceof \Exception) {
+        if ($this->errors instanceof \Exception) {
             $this->status = $this->createStatusFromException();
         }
 
@@ -245,57 +189,19 @@ class ApiProblem
     }
 
     /**
-     * Retrieve the title
-     *
-     * If the default $type is used, and the $status is found in
-     * $problemStatusTitles, then use the matching title.
-     *
-     * If no title was provided, and the above conditions are not met, use the
-     * string 'Unknown'.
-     *
-     * Otherwise, use the title provided.
+     * Create errors message from an exception.
      *
      * @return string
      */
-    protected function getTitle()
+    protected function createErrorsFromException()
     {
-        if (null !== $this->title) {
-            return $this->title;
-        }
-
-        if (null === $this->title
-            && $this->type == 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html'
-            && array_key_exists($this->getStatus(), $this->problemStatusTitles)
-        ) {
-            return $this->problemStatusTitles[$this->status];
-        }
-
-        if ($this->detail instanceof \Exception) {
-            return get_class($this->detail);
-        }
-
-        if (null === $this->title) {
-            return 'Unknown';
-        }
-
-        return $this->title;
-    }
-
-    /**
-     * Create detail message from an exception.
-     *
-     * @return string
-     */
-    protected function createDetailFromException()
-    {
-        $e = $this->detail;
+        $e = $this->errors;
 
         if (!$this->detailIncludesStackTrace) {
             return $e->getMessage();
         }
 
         $message = trim($e->getMessage());
-        $this->additionalDetails['trace'] = $e->getTrace();
 
         $previous = array();
         $e = $e->getPrevious();
@@ -306,9 +212,6 @@ class ApiProblem
                 'trace'   => $e->getTrace(),
             );
             $e = $e->getPrevious();
-        }
-        if (count($previous)) {
-            $this->additionalDetails['exception_stack'] = $previous;
         }
 
         return $message;
@@ -321,7 +224,7 @@ class ApiProblem
      */
     protected function createStatusFromException()
     {
-        $e      = $this->detail;
+        $e      = $this->errors;
         $status = $e->getCode();
 
         if (!empty($status)) {

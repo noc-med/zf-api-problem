@@ -55,10 +55,8 @@ class RenderErrorListener extends AbstractListenerAggregate
     {
         $response    = $e->getResponse();
         $status      = 406;
-        $title       = 'Not Acceptable';
-        $describedBy = 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html';
-        $detail      = 'Your request could not be resolved to an acceptable representation.';
-        $details     = false;
+        $errors      = 'Your request could not be resolved to an acceptable
+        representation.';
 
         $exception   = $e->getParam('exception');
         if ($exception instanceof \Exception
@@ -70,9 +68,7 @@ class RenderErrorListener extends AbstractListenerAggregate
             } else {
                 $status = 500;
             }
-            $title   = 'Unexpected error';
-            $detail  = $exception->getMessage();
-            $details = array(
+            $errors = array(
                 'code'    => $exception->getCode(),
                 'message' => $exception->getMessage(),
                 'trace'   => $exception->getTraceAsString(),
@@ -81,13 +77,8 @@ class RenderErrorListener extends AbstractListenerAggregate
 
         $payload = array(
             'status'      => $status,
-            'title'       => $title,
-            'describedBy' => $describedBy,
-            'detail'      => $detail,
+            'errors'      => $errors,
         );
-        if ($details && $this->displayExceptions) {
-            $payload['details'] = $details;
-        }
 
         $response->getHeaders()->addHeaderLine('content-type', 'application/problem+json');
         $response->setStatusCode($status);

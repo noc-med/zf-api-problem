@@ -32,7 +32,6 @@ class ApiProblemResponse extends Response
     {
         $this->apiProblem = $apiProblem;
         $this->setCustomStatusCode($apiProblem->status);
-        $this->setReasonPhrase($apiProblem->title);
 
         if (defined('JSON_UNESCAPED_SLASHES')) {
             $this->jsonFlags = constant('JSON_UNESCAPED_SLASHES');
