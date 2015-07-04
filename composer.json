@@ -1,5 +1,5 @@
 {
-    "name": "noc-med/zf-api-problem",
+    "name": "nocvp/zf-api-problem",
     "description": "ZF2 Module providing API-Problem assets and rendering",
     "type": "library",
     "license": "BSD-3-Clause",
